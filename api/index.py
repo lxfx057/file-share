@@ -24,7 +24,7 @@ HTML_TEMPLATE = """
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<title>Win98 Vercel Hub - Fast Sync</title>
+<title>Win98 Vercel Hub - Max 250MB</title>
 <style>
     body { background-color: #008080; font-family: 'MS Sans Serif', Tahoma, sans-serif; font-size: 11px; margin: 10px; color: #000; }
     .window { background-color: #c0c0c0; border: 2px solid; border-color: #dfdfdf #404040 #404040 #dfdfdf; width: 100%; max-width: 600px; margin: auto; box-shadow: 4px 4px 10px rgba(0,0,0,0.6); }
@@ -70,15 +70,15 @@ HTML_TEMPLATE = """
         <!-- ACCESSO PROTETTO -->
         <div id="step-connect">
             <div class="help-box">
-                <b>🔒 ACCESSO CLOUD VERCEL (FAST):</b><br>
-                Inserisci la password <b>admin2027</b> e seleziona il tuo ruolo.
+                <b>🔒 ACCESSO CLOUD (MAX 250MB):</b><br>
+                Inserisci la password <b>admin2027</b> e seleziona il tuo ruolo. I file fino a 250MB verranno gestiti in sicurezza.
             </div>
 
             <div class="form-group">
                 <label>1. Ruolo Dispositivo:</label>
                 <select id="hub-role">
                     <option value="" disabled selected>-- Seleziona ruolo --</option>
-                    <option value="sender">Inviante (Carica file)</option>
+                    <option value="sender">Inviante (Carica file fino a 250MB)</option>
                     <option value="receiver">Ricevente (Visualizza, Salva ed Elimina)</option>
                 </select>
             </div>
@@ -104,7 +104,7 @@ HTML_TEMPLATE = """
         <!-- DASHBOARD INVIANTE -->
         <div id="dashboard-sender" class="hidden">
             <div class="help-box" style="background:#e8f4f8;">
-                <b>📤 CARICAMENTO ROOT:</b> Seleziona i file dal dispositivo.
+                <b>📤 CARICAMENTO ROOT (Limite 250MB):</b> Seleziona i file pesanti dal dispositivo.
             </div>
             <div class="form-group">
                 <label>Seleziona file da inviare:</label>
@@ -132,14 +132,14 @@ HTML_TEMPLATE = """
                         </tr>
                     </thead>
                     <tbody id="file-table-body">
-                        <tr><td colspan="3" style="text-align:center; color:gray; padding-top:40px;">Sincronizzazione rapida attiva...</td></tr>
+                        <tr><td colspan="3" style="text-align:center; color:gray; padding-top:40px;">Sincronizzazione attiva...</td></tr>
                     </tbody>
                 </table>
             </div>
 
             <div class="progress-container" style="margin-top: 6px;">
                 <div class="progress-bar" id="receiver-progress" style="width: 100%; background: #008000;"></div>
-                <div class="progress-text" id="receiver-progress-text">Ricezione Ultra-Rapida Attiva</div>
+                <div class="progress-text" id="receiver-progress-text">Sincronizzazione in tempo reale</div>
             </div>
 
             <div class="status-bar">
@@ -152,7 +152,7 @@ HTML_TEMPLATE = """
 </div>
 
 <script>
-    let lastFileCount = 0;
+    let lastFileSignature = "";
 
     function exitApp() {
         location.reload();
@@ -171,14 +171,14 @@ HTML_TEMPLATE = """
 
         document.getElementById('step-connect').classList.add('hidden');
         if (role === 'sender') {
+            document.getElementById('dashboard-sender').classList.add('hidden'); // placeholder
             document.getElementById('dashboard-sender').classList.remove('hidden');
             document.getElementById('win-title').innerText = "📁 Esplora risorse - [INVIANTE ROOT]";
         } else {
             document.getElementById('dashboard-receiver').classList.remove('hidden');
             document.getElementById('win-title').innerText = "📁 Esplora risorse - [RICEVENTE ROOT]";
             fetchFiles();
-            // Polling velocizzato a 800ms per la massima reattività di ricezione
-            setInterval(fetchFiles, 800);
+            setInterval(fetchFiles, 700); // Polling fulmineo a 700ms
         }
     }
 
@@ -186,23 +186,27 @@ HTML_TEMPLATE = """
         const files = event.target.files;
         if (!files.length) return;
 
-        let total = files.length;
-        let processed = 0;
-        let start = Date.now();
-
-        const bar = document.getElementById('sender-progress');
-        const text = document.getElementById('sender-progress-text');
-        const info = document.getElementById('sender-time-info');
+        const MAX_SIZE = 250 * 1024 * 1024; // 250 MB limite
 
         for (let i = 0; i < files.length; i++) {
             let f = files[i];
+
+            if (f.size > MAX_SIZE) {
+                alert(`Il file "${f.name}" supera i 250MB consentiti (${(f.size/(1024*1024)).toFixed(1)}MB).`);
+                continue;
+            }
+
             let reader = new FileReader();
+            let bar = document.getElementById('sender-progress');
+            let text = document.getElementById('sender-progress-text');
+            let info = document.getElementById('sender-time-info');
+            let start = Date.now();
 
             reader.onprogress = (e) => {
                 if (e.lengthComputable) {
                     let p = Math.round((e.loaded / e.total) * 100);
                     bar.style.width = p + '%';
-                    text.innerText = `Caricamento ${f.name}: ${p}%`;
+                    text.innerText = `Elaborazione ${f.name}: ${p}%`;
                 }
             };
 
@@ -213,21 +217,25 @@ HTML_TEMPLATE = """
                     data: e.target.result
                 };
 
-                await fetch('/api/index', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'upload', file: filePayload })
-                });
+                text.innerText = `Invio al cloud in corso...`;
 
-                processed++;
-                let elapsed = (Date.now() - start) / 1000;
-                let rem = Math.max(0, Math.ceil((elapsed / processed) * total - elapsed));
-                info.innerText = `⏱️ Trascorso: ${elapsed.toFixed(1)}s — Rimasto: ${rem}s`;
+                try {
+                    let response = await fetch('/api/index', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'upload', file: filePayload })
+                    });
 
-                if (processed === total) {
-                    bar.style.width = '100%';
-                    text.innerText = 'Caricamento completato!';
-                    // Forza un aggiornamento immediato della vista lato inviante se serve
+                    if (response.ok) {
+                        let elapsed = (Date.now() - start) / 1000;
+                        bar.style.width = '100%';
+                        text.innerText = 'Caricamento completato!';
+                        info.innerText = `⏱️ Tempo impiegato: ${elapsed.toFixed(1)}s`;
+                    } else {
+                        text.innerText = 'Errore caricamento (File troppo grande o timeout)';
+                    }
+                } catch (err) {
+                    text.innerText = 'Errore di connessione.';
                 }
             };
 
@@ -240,9 +248,10 @@ HTML_TEMPLATE = """
             let res = await fetch('/api/index?get=files');
             let files = await res.json();
             
-            // Aggiorna la tabella solo se ci sono variazioni per massimizzare la velocità
-            if (files.length !== lastFileCount) {
-                lastFileCount = files.length;
+            // Crea una firma rapida basata su nomi e lunghezze per sibilare l'aggiornamento immediato
+            let signature = files.map(f => f.name + f.size).join('_');
+            if (signature !== lastFileSignature) {
+                lastFileSignature = signature;
                 renderFiles(files);
             }
         } catch(err) {
@@ -291,6 +300,7 @@ HTML_TEMPLATE = """
     }
 
     async function deleteFile(idx) {
+        // Sibilata immediata di eliminazione: rimuove istantaneamente la riga e aggiorna il server
         await fetch('/api/index', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
