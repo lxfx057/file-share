@@ -4,7 +4,6 @@ import json
 
 app = Flask(__name__)
 
-# File temporaneo condiviso nella cartella di sistema persistente di Vercel
 DATA_FILE = '/tmp/hub_files.json'
 
 def load_files():
@@ -25,7 +24,7 @@ HTML_TEMPLATE = """
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<title>Win98 Vercel Hub - Real Sync</title>
+<title>Win98 Vercel Hub - Fast Sync</title>
 <style>
     body { background-color: #008080; font-family: 'MS Sans Serif', Tahoma, sans-serif; font-size: 11px; margin: 10px; color: #000; }
     .window { background-color: #c0c0c0; border: 2px solid; border-color: #dfdfdf #404040 #404040 #dfdfdf; width: 100%; max-width: 600px; margin: auto; box-shadow: 4px 4px 10px rgba(0,0,0,0.6); }
@@ -71,7 +70,7 @@ HTML_TEMPLATE = """
         <!-- ACCESSO PROTETTO -->
         <div id="step-connect">
             <div class="help-box">
-                <b>🔒 ACCESSO CLOUD VERCEL:</b><br>
+                <b>🔒 ACCESSO CLOUD VERCEL (FAST):</b><br>
                 Inserisci la password <b>admin2027</b> e seleziona il tuo ruolo.
             </div>
 
@@ -133,14 +132,14 @@ HTML_TEMPLATE = """
                         </tr>
                     </thead>
                     <tbody id="file-table-body">
-                        <tr><td colspan="3" style="text-align:center; color:gray; padding-top:40px;">Sincronizzazione in corso...</td></tr>
+                        <tr><td colspan="3" style="text-align:center; color:gray; padding-top:40px;">Sincronizzazione rapida attiva...</td></tr>
                     </tbody>
                 </table>
             </div>
 
             <div class="progress-container" style="margin-top: 6px;">
                 <div class="progress-bar" id="receiver-progress" style="width: 100%; background: #008000;"></div>
-                <div class="progress-text" id="receiver-progress-text">Sincronizzazione Cloud Attiva</div>
+                <div class="progress-text" id="receiver-progress-text">Ricezione Ultra-Rapida Attiva</div>
             </div>
 
             <div class="status-bar">
@@ -153,6 +152,8 @@ HTML_TEMPLATE = """
 </div>
 
 <script>
+    let lastFileCount = 0;
+
     function exitApp() {
         location.reload();
     }
@@ -176,7 +177,8 @@ HTML_TEMPLATE = """
             document.getElementById('dashboard-receiver').classList.remove('hidden');
             document.getElementById('win-title').innerText = "📁 Esplora risorse - [RICEVENTE ROOT]";
             fetchFiles();
-            setInterval(fetchFiles, 1500); // Polling costante per vedere i file sull'altro telefono
+            // Polling velocizzato a 800ms per la massima reattività di ricezione
+            setInterval(fetchFiles, 800);
         }
     }
 
@@ -225,6 +227,7 @@ HTML_TEMPLATE = """
                 if (processed === total) {
                     bar.style.width = '100%';
                     text.innerText = 'Caricamento completato!';
+                    // Forza un aggiornamento immediato della vista lato inviante se serve
                 }
             };
 
@@ -236,7 +239,12 @@ HTML_TEMPLATE = """
         try {
             let res = await fetch('/api/index?get=files');
             let files = await res.json();
-            renderFiles(files);
+            
+            // Aggiorna la tabella solo se ci sono variazioni per massimizzare la velocità
+            if (files.length !== lastFileCount) {
+                lastFileCount = files.length;
+                renderFiles(files);
+            }
         } catch(err) {
             console.error(err);
         }
