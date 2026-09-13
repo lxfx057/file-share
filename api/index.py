@@ -1,17 +1,31 @@
 from flask import Flask, request, jsonify, render_template_string
+import os
 import json
 
 app = Flask(__name__)
 
-# Memoria temporanea condivisa sul serverless
-SHARED_FILES = []
+# File temporaneo condiviso nella cartella di sistema persistente di Vercel
+DATA_FILE = '/tmp/hub_files.json'
+
+def load_files():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_files(files):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(files, f)
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<title>Win98 Vercel Hub</title>
+<title>Win98 Vercel Hub - Real Sync</title>
 <style>
     body { background-color: #008080; font-family: 'MS Sans Serif', Tahoma, sans-serif; font-size: 11px; margin: 10px; color: #000; }
     .window { background-color: #c0c0c0; border: 2px solid; border-color: #dfdfdf #404040 #404040 #dfdfdf; width: 100%; max-width: 600px; margin: auto; box-shadow: 4px 4px 10px rgba(0,0,0,0.6); }
@@ -57,8 +71,8 @@ HTML_TEMPLATE = """
         <!-- ACCESSO PROTETTO -->
         <div id="step-connect">
             <div class="help-box">
-                <b>🔒 ACCESSO VERCEL PYTHON:</b><br>
-                Inserisci la password <b>admin2027</b> e seleziona il tuo ruolo. I file caricati confluiranno nella cartella principale.
+                <b>🔒 ACCESSO CLOUD VERCEL:</b><br>
+                Inserisci la password <b>admin2027</b> e seleziona il tuo ruolo.
             </div>
 
             <div class="form-group">
@@ -119,14 +133,14 @@ HTML_TEMPLATE = """
                         </tr>
                     </thead>
                     <tbody id="file-table-body">
-                        <tr><td colspan="3" style="text-align:center; color:gray; padding-top:40px;">Caricamento file in corso...</td></tr>
+                        <tr><td colspan="3" style="text-align:center; color:gray; padding-top:40px;">Sincronizzazione in corso...</td></tr>
                     </tbody>
                 </table>
             </div>
 
             <div class="progress-container" style="margin-top: 6px;">
                 <div class="progress-bar" id="receiver-progress" style="width: 100%; background: #008000;"></div>
-                <div class="progress-text" id="receiver-progress-text">Sincronizzazione Attiva</div>
+                <div class="progress-text" id="receiver-progress-text">Sincronizzazione Cloud Attiva</div>
             </div>
 
             <div class="status-bar">
@@ -162,7 +176,7 @@ HTML_TEMPLATE = """
             document.getElementById('dashboard-receiver').classList.remove('hidden');
             document.getElementById('win-title').innerText = "📁 Esplora risorse - [RICEVENTE ROOT]";
             fetchFiles();
-            setInterval(fetchFiles, 2000); // Aggiornamento automatico ogni 2 secondi
+            setInterval(fetchFiles, 1500); // Polling costante per vedere i file sull'altro telefono
         }
     }
 
@@ -220,7 +234,7 @@ HTML_TEMPLATE = """
 
     async function fetchFiles() {
         try {
-            let res = await fetch('/api/index');
+            let res = await fetch('/api/index?get=files');
             let files = await res.json();
             renderFiles(files);
         } catch(err) {
@@ -285,16 +299,23 @@ HTML_TEMPLATE = """
 @app.route("/", defaults={"path": ""}, methods=["GET", "POST"])
 @app.route("/<path:path>", methods=["GET", "POST"])
 def catch_all(path):
-    global SHARED_FILES
     if request.method == "POST":
         data = request.get_json()
-        if data and data.get("action") == "upload":
-            SHARED_FILES.append(data.get("file"))
-            return jsonify({"status": "success"})
-        elif data and data.get("action") == "delete":
-            idx = data.get("index")
-            if 0 <= idx < len(SHARED_FILES):
-                SHARED_FILES.pop(idx)
-            return jsonify({"status": "success"})
+        if data:
+            files = load_files()
+            if data.get("action") == "upload":
+                files.append(data.get("file"))
+                save_files(files)
+                return jsonify({"status": "success"})
+            elif data.get("action") == "delete":
+                idx = data.get("index")
+                if 0 <= idx < len(files):
+                    files.pop(idx)
+                    save_files(files)
+                return jsonify({"status": "success"})
+        return jsonify({"status": "error"})
     
+    if request.args.get("get") == "files":
+        return jsonify(load_files())
+        
     return render_template_string(HTML_TEMPLATE)
