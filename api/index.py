@@ -1,339 +1,46 @@
-from flask import Flask, request, jsonify, render_template_string
-import os
-import json
+from flask import Flask, Response
 
 app = Flask(__name__)
 
-DATA_FILE = '/tmp/hub_files.json'
-
-def load_files():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, 'r') as f:
-                return json.load(f)
-        except:
-            return []
-    return []
-
-def save_files(files):
-    with open(DATA_FILE, 'w') as f:
-        json.dump(files, f)
-
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="utf-8">
-<title>Win98 Vercel Hub - Max 250MB</title>
+HTML = r"""<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#008080"><script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script><title>File Share 98 - PIN</title>
 <style>
-    body { background-color: #008080; font-family: 'MS Sans Serif', Tahoma, sans-serif; font-size: 11px; margin: 10px; color: #000; }
-    .window { background-color: #c0c0c0; border: 2px solid; border-color: #dfdfdf #404040 #404040 #dfdfdf; width: 100%; max-width: 600px; margin: auto; box-shadow: 4px 4px 10px rgba(0,0,0,0.6); }
-    .title-bar { background: linear-gradient(90deg, #000080, #1084d0); color: white; padding: 4px 6px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-    .menu-bar { background: #c0c0c0; padding: 2px 4px; border-bottom: 1px solid #808080; display: flex; gap: 15px; }
-    .menu-item { padding: 2px 6px; cursor: pointer; }
-    .menu-item:hover { background: #000080; color: white; }
-    .content { padding: 10px; }
-    .form-group { margin-bottom: 10px; }
-    label { display: block; margin-bottom: 3px; font-weight: bold; }
-    select, input[type="password"] { width: 100%; padding: 4px; background: white; border: 2px inset #808080; font-family: inherit; box-sizing: border-box; }
-    .btn { background-color: #c0c0c0; border: 2px solid; border-color: #dfdfdf #404040 #404040 #dfdfdf; padding: 4px 10px; cursor: pointer; font-family: inherit; font-weight: bold; }
-    .btn:active { border-color: #404040 #dfdfdf #dfdfdf #404040; padding: 5px 9px 3px 11px; }
-    .explorer-view { border: 2px inset #808080; background: white; height: 320px; margin-top: 5px; overflow-y: auto; padding: 5px; }
-    .file-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .file-table th { background: #c0c0c0; border: 1px solid #808080; padding: 4px; font-size: 11px; }
-    .file-table td { padding: 6px; border-bottom: 1px dotted #e0e0e0; font-size: 11px; }
-    .file-table tr:hover { background: #000080; color: white; }
-    .help-box { background: #ffffe0; border: 1px solid #808080; padding: 8px; margin-bottom: 10px; font-size: 11px; line-height: 1.4; }
-    .error-box { background: #800000; color: white; padding: 12px; border: 2px inset #ff0000; font-weight: bold; text-align: center; }
-    .status-bar { background: #c0c0c0; border-top: 1px solid #808080; padding: 3px 6px; margin-top: 8px; display: flex; justify-content: space-between; font-size: 10px; }
-    .progress-container { background: white; border: 2px inset #808080; height: 16px; width: 100%; margin-top: 6px; position: relative; overflow: hidden; }
-    .progress-bar { background: #000080; height: 100%; width: 0%; transition: width 0.1s linear; }
-    .progress-text { position: absolute; width: 100%; text-align: center; top: 0; left: 0; font-size: 10px; font-weight: bold; mix-blend-mode: difference; color: #fff; }
-    .hidden { display: none; }
-</style>
-</head>
-<body>
-
-<div class="window">
-    <div class="title-bar">
-        <span id="win-title">📁 Esplora risorse - Root C:\\Hub</span>
-        <span>[X]</span>
-    </div>
-    <div class="menu-bar">
-        <div class="menu-item">File</div>
-        <div class="menu-item">Modifica</div>
-        <div class="menu-item">Visualizza</div>
-        <div class="menu-item" onclick="exitApp()">Esci</div>
-    </div>
-    <div class="content">
-        
-        <!-- ACCESSO PROTETTO -->
-        <div id="step-connect">
-            <div class="help-box">
-                <b>🔒 ACCESSO CLOUD (MAX 250MB):</b><br>
-                Inserisci la password <b>admin2027</b> e seleziona il tuo ruolo. I file fino a 250MB verranno gestiti in sicurezza.
-            </div>
-
-            <div class="form-group">
-                <label>1. Ruolo Dispositivo:</label>
-                <select id="hub-role">
-                    <option value="" disabled selected>-- Seleziona ruolo --</option>
-                    <option value="sender">Inviante (Carica file fino a 250MB)</option>
-                    <option value="receiver">Ricevente (Visualizza, Salva ed Elimina)</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>2. Parola d'ordine:</label>
-                <input type="password" id="hub-password" placeholder="admin2027">
-            </div>
-            
-            <button class="btn" style="width:100%; margin-top:5px;" onclick="authenticateHub()">Connetti</button>
-        </div>
-
-        <!-- ERRORE 604 -->
-        <div id="step-error" class="hidden">
-            <div class="error-box">
-                ERROR 604<br>
-                Accesso Negato / Password Errata.<br><br>
-                <span style="font-size:11px; font-weight:normal;">La parola d'ordine inserita non è corretta. Connessione rifiutata.</span>
-            </div>
-            <button class="btn" style="margin-top: 15px; width:100%;" onclick="exitApp()">Riprova / Esci</button>
-        </div>
-
-        <!-- DASHBOARD INVIANTE -->
-        <div id="dashboard-sender" class="hidden">
-            <div class="help-box" style="background:#e8f4f8;">
-                <b>📤 CARICAMENTO ROOT (Limite 250MB):</b> Seleziona i file pesanti dal dispositivo.
-            </div>
-            <div class="form-group">
-                <label>Seleziona file da inviare:</label>
-                <input type="file" id="sender-file-input" multiple onchange="uploadFilesToCloud(event)">
-            </div>
-            <div class="progress-container">
-                <div class="progress-bar" id="sender-progress"></div>
-                <div class="progress-text" id="sender-progress-text">Pronto per l'invio</div>
-            </div>
-            <div style="font-size:11px; margin-top:8px; font-weight:bold; color:#000080;" id="sender-time-info"></div>
-            <button class="btn" style="width:100%; margin-top:15px; background:#d0d0d0;" onclick="exitApp()">Esci</button>
-        </div>
-
-        <!-- DASHBOARD RICEVENTE -->
-        <div id="dashboard-receiver" class="hidden">
-            <div style="font-size: 11px; margin-bottom: 5px; font-weight: bold;">Indirizzo: <span style="background:white; padding:2px 8px; border:1px inset #808080; display:inline-block; width:75%;">C:\\Hub\\Root</span></div>
-            
-            <div class="explorer-view">
-                <table class="file-table">
-                    <thead>
-                        <tr>
-                            <th>Nome File</th>
-                            <th>Dimensione</th>
-                            <th>Azioni (Salva / Elimina)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="file-table-body">
-                        <tr><td colspan="3" style="text-align:center; color:gray; padding-top:40px;">Sincronizzazione attiva...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="progress-container" style="margin-top: 6px;">
-                <div class="progress-bar" id="receiver-progress" style="width: 100%; background: #008000;"></div>
-                <div class="progress-text" id="receiver-progress-text">Sincronizzazione in tempo reale</div>
-            </div>
-
-            <div class="status-bar">
-                <span id="status-items-count">0 oggetto(i)</span>
-                <span><button class="btn" style="padding:1px 6px; background:#d0d0d0;" onclick="exitApp()">Esci</button></span>
-            </div>
-        </div>
-
-    </div>
-</div>
-
+*{box-sizing:border-box}body{margin:0;padding:12px;background:#008080;font:14px Tahoma,Arial;color:#111;min-height:100vh}.window{max-width:760px;margin:18px auto;background:#c0c0c0;border:2px solid;border-color:#fff #404040 #404040 #fff;box-shadow:2px 2px #111}.title{margin:3px 3px 0;padding:8px;background:linear-gradient(90deg,#000080,#1084d0);color:white;font-weight:bold}.content{padding:14px}.panel{border:2px groove white;padding:12px;margin:0 0 12px}h2{font-size:15px;margin:0 0 10px}.muted{font-size:12px;color:#444;line-height:1.5}.btn{padding:10px 14px;min-height:42px;border:2px solid;border-color:white #404040 #404040 white;background:#c0c0c0;font:bold 14px Tahoma;cursor:pointer}.primary{background:#000080;color:white}.danger{background:#e4baba}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}.pin{font:bold 34px "Courier New";letter-spacing:7px;text-align:center;background:#fff;border:2px inset #888;padding:12px;margin:12px 0}.field{width:100%;padding:12px;font:22px "Courier New";letter-spacing:5px;text-align:center;border:2px inset #888}.status{background:#eee;border:2px inset #888;padding:10px;min-height:42px;margin-top:10px;font-size:12px}.progress{height:20px;background:white;border:2px inset #888;margin:8px 0}.progress div{height:100%;width:0;background:#000080}.hidden{display:none!important}.file{display:block;margin:12px 0;max-width:100%}@media(max-width:520px){body{padding:4px}.window{margin:3px auto}.content{padding:9px}.panel{padding:9px}.pin{font-size:28px;letter-spacing:4px}}
+</style></head><body><div class="window"><div class="title">🖥 FILE SHARE 98 — Trasferimento diretto</div><main class="content">
+<section class="panel"><h2>🔒 Nessun archivio cloud</h2><p class="muted">Inserisci lo stesso PIN su entrambi i telefoni. I file viaggiano direttamente tra i dispositivi; il servizio di collegamento pubblico riceve solo i dati tecnici WebRTC. Nessuna registrazione.</p></section>
+<section class="panel"><h2>📤 Invia da questo dispositivo</h2><button id="create" class="btn primary">Crea PIN temporaneo</button><div id="pinBox" class="hidden"><div class="pin" id="pin">--------</div><p class="muted">Inserisci questo PIN sul secondo dispositivo.</p><label class="btn file">Scegli file<input id="files" type="file" multiple hidden disabled></label></div></section>
+<section class="panel"><h2>📥 Ricevi su questo dispositivo</h2><input id="joinPin" class="field" inputmode="numeric" maxlength="8" placeholder="PIN 8 CIFRE"><button id="join" class="btn primary" style="width:100%;margin-top:8px">Collega e ricevi</button><div id="received"></div></section>
+<section class="panel"><h2>📊 Trasferimento</h2><div class="progress"><div id="bar"></div></div><div id="status" class="status" aria-live="polite">In attesa di connessione.</div><button id="close" class="btn danger" style="margin-top:8px" disabled>Chiudi sessione</button></section>
+<p class="muted">File Share 98 · Android ⇄ iPhone · Fino a 3 GB per file (limite applicativo; la memoria del browser e la rete possono limitare i trasferimenti molto grandi).</p>
+</main></div>
 <script>
-    let lastFileSignature = "";
+const MQTT_URL = 'wss://broker.emqx.io:8084/mqtt';
+const MAX_FILE = 3000000000, CHUNK = 48 * 1024;
+let pc=null, channel=null, roomPin=null, role=null, mqtt=null, receiveParts=[], receiveMeta=null, receivedBytes=0, busy=false, nativeFile=false;
+const $=id=>document.getElementById(id);
+function say(s){$('status').textContent=s}
+function progress(p){$('bar').style.width=Math.max(0,Math.min(100,p))+'%'}
+function topic(pin){return 'fileshare98/v1/'+pin}
+function makeMqtt(){return new Promise((resolve,reject)=>{if(!window.mqtt){reject(Error('Libreria di collegamento non disponibile. Ricarica la pagina.'));return}mqtt=window.mqtt.connect(MQTT_URL,{clientId:'fs98_'+Math.random().toString(16).slice(2),clean:true,protocolVersion:5,connectTimeout:12000,reconnectPeriod:0});const timer=setTimeout(()=>reject(Error('Servizio PIN non raggiungibile. Riprova.')),13000);mqtt.once('connect',()=>{clearTimeout(timer);resolve()});mqtt.once('error',e=>{clearTimeout(timer);reject(Error('Connessione PIN non riuscita: '+e.message))})})}
+function publishSignal(kind,sdp){mqtt.publish(topic(roomPin),JSON.stringify({kind,sdp,at:Date.now()}),{qos:1,retain:true,properties:{messageExpiryInterval:600}})}
+function waitIce(){return new Promise(resolve=>{if(pc.iceGatheringState==='complete')return resolve();const done=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',done);resolve()}};pc.addEventListener('icegatheringstatechange',done);setTimeout(resolve,12000)})}
+function setupPeer(sender){pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});pc.onconnectionstatechange=()=>{say('Connessione: '+pc.connectionState);if(pc.connectionState==='failed')say('Connessione diretta non riuscita su questa rete. Prova con entrambi i telefoni sulla stessa Wi-Fi.')};if(sender){channel=pc.createDataChannel('files',{ordered:true});wireChannel()}else pc.ondatachannel=e=>{channel=e.channel;wireChannel()}}
+function wireChannel(){channel.binaryType='arraybuffer';channel.onopen=()=>{say('Dispositivi collegati. Pronto al trasferimento.');$('close').disabled=false;if(role==='receiver')say('Collegato! Attendo i file…');else $('files').disabled=false};channel.onmessage=onData;channel.onerror=()=>say('Errore nel canale di trasferimento.')}
+async function createRoom(){roomPin=String(10000000+(crypto.getRandomValues(new Uint32Array(1))[0]%90000000));role='sender';$('pin').textContent=roomPin;$('pinBox').classList.remove('hidden');say('Connessione al servizio PIN…');await makeMqtt();await new Promise((resolve,reject)=>mqtt.subscribe(topic(roomPin),{qos:1},e=>e?reject(e):resolve()));setupPeer(true);const offer=await pc.createOffer();await pc.setLocalDescription(offer);await waitIce();mqtt.on('message',async(t,payload)=>{if(t!==topic(roomPin)||role!=='sender')return;try{const m=JSON.parse(payload.toString());if(m.kind==='answer'&&Date.now()-m.at<600000&&pc.signalingState==='have-local-offer'){await pc.setRemoteDescription({type:'answer',sdp:m.sdp});say('Risposta ricevuta. Connessione in corso…')}}catch(e){say('Errore di collegamento: '+e.message)}});publishSignal('offer',pc.localDescription.sdp);say('PIN creato. In attesa del dispositivo ricevente…');$('files').disabled=true;$('close').disabled=false}
+async function joinRoom(){const pin=$('joinPin').value.replace(/\D/g,'');if(!/^\d{8}$/.test(pin))throw Error('Inserisci un PIN di 8 cifre.');roomPin=pin;role='receiver';say('Connessione al servizio PIN…');await makeMqtt();await new Promise((resolve,reject)=>{let done=false;const timer=setTimeout(()=>{if(!done){done=true;reject(Error('PIN non trovato o scaduto.'))}},30000);mqtt.subscribe(topic(pin),{qos:1},e=>{if(e&&!done){done=true;clearTimeout(timer);reject(e)}});mqtt.on('message',async(t,payload)=>{if(t!==topic(pin)||done)return;try{const m=JSON.parse(payload.toString());if(m.kind!=='offer'||!m.sdp||Date.now()-m.at>600000)return;done=true;clearTimeout(timer);setupPeer(false);await pc.setRemoteDescription({type:'offer',sdp:m.sdp});const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await waitIce();publishSignal('answer',pc.localDescription.sdp);$('close').disabled=false;say('PIN riconosciuto. Collegamento in corso…');resolve()}catch(err){done=true;clearTimeout(timer);reject(err)}})})}
+function waitDrain(){if(channel.bufferedAmount<1024*1024)return Promise.resolve();return new Promise(resolve=>{channel.bufferedAmountLowThreshold=256*1024;channel.onbufferedamountlow=()=>{channel.onbufferedamountlow=null;resolve()}})}
+async function sendFiles(list){if(!channel||channel.readyState!=='open')throw Error('Prima collega il secondo dispositivo.');if(busy)return;busy=true;$('files').disabled=true;try{for(const file of list){if(file.size>MAX_FILE)throw Error(file.name+' supera 3 GB.');channel.send(JSON.stringify({kind:'meta',name:file.name,size:file.size,type:file.type||'application/octet-stream'}));let sent=0;while(sent<file.size){await waitDrain();const part=file.slice(sent,Math.min(sent+CHUNK,file.size));channel.send(await part.arrayBuffer());sent+=part.size;progress(sent/file.size*100);say('Invio '+file.name+' — '+Math.round(sent/file.size*100)+'%')}channel.send(JSON.stringify({kind:'end'}));say('Inviato: '+file.name)}say('Trasferimento completato.')}finally{busy=false;$('files').disabled=false}}
+function toBase64(buffer){let binary='';const bytes=new Uint8Array(buffer);for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);return btoa(binary)}
+function onData(e){if(typeof e.data==='string'){let m;try{m=JSON.parse(e.data)}catch{return}if(m.kind==='meta'){receiveMeta=m;receiveParts=[];receivedBytes=0;nativeFile=!!(window.AndroidFileBridge&&window.AndroidFileBridge.beginFile);if(nativeFile)window.AndroidFileBridge.beginFile(m.name,m.type,m.size);progress(0);say('Ricezione '+m.name+' ('+(m.size/1073741824).toFixed(2)+' GB)')}else if(m.kind==='end'&&receiveMeta){if(nativeFile){window.AndroidFileBridge.finishFile();say('Ricevuto e salvato nei Download: '+receiveMeta.name)}else{const blob=new Blob(receiveParts,{type:receiveMeta.type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=receiveMeta.name;a.textContent='Scarica '+receiveMeta.name+' ('+(blob.size/1048576).toFixed(1)+' MB)';a.className='btn primary file';$('received').append(a);say('Ricevuto '+receiveMeta.name+'. Tocca Scarica per salvarlo.')}receiveParts=[];receiveMeta=null;progress(100)}return}if(receiveMeta){if(nativeFile)window.AndroidFileBridge.appendChunk(toBase64(e.data));else receiveParts.push(e.data);receivedBytes+=e.data.byteLength;progress(receivedBytes/receiveMeta.size*100);say('Ricezione in corso: '+Math.round(receivedBytes/receiveMeta.size*100)+'%')}}
+function closeSession(){if(channel)channel.close();if(pc)pc.close();if(mqtt){if(roomPin)mqtt.publish(topic(roomPin),'',{retain:true,qos:1});mqtt.end(true)}pc=null;channel=null;mqtt=null;roomPin=null;role=null;$('close').disabled=true;$('files').disabled=true;say('Sessione chiusa.');progress(0)}
+$('create').onclick=()=>createRoom().catch(e=>say(e.message));
+$('join').onclick=()=>joinRoom().catch(e=>{say(e.message);if(pc)pc.close()});
+$('files').onchange=e=>{const files=Array.from(e.target.files||[]);e.target.value='';sendFiles(files).catch(e=>say(e.message))};
+$('close').onclick=closeSession;
+window.addEventListener('pagehide',()=>{if(mqtt&&roomPin){try{mqtt.publish(topic(roomPin),'',{retain:true,qos:1})}catch(e){}}});
+</script></body></html>"""
 
-    function exitApp() {
-        location.reload();
-    }
-
-    function authenticateHub() {
-        const role = document.getElementById('hub-role').value;
-        const pass = document.getElementById('hub-password').value.trim();
-
-        if (!role || pass !== "admin2027") {
-            document.getElementById('step-connect').classList.add('hidden');
-            document.getElementById('step-error').classList.remove('hidden');
-            document.getElementById('win-title').innerText = "❌ Errore 604";
-            return;
-        }
-
-        document.getElementById('step-connect').classList.add('hidden');
-        if (role === 'sender') {
-            document.getElementById('dashboard-sender').classList.add('hidden'); // placeholder
-            document.getElementById('dashboard-sender').classList.remove('hidden');
-            document.getElementById('win-title').innerText = "📁 Esplora risorse - [INVIANTE ROOT]";
-        } else {
-            document.getElementById('dashboard-receiver').classList.remove('hidden');
-            document.getElementById('win-title').innerText = "📁 Esplora risorse - [RICEVENTE ROOT]";
-            fetchFiles();
-            setInterval(fetchFiles, 700); // Polling fulmineo a 700ms
-        }
-    }
-
-    function uploadFilesToCloud(event) {
-        const files = event.target.files;
-        if (!files.length) return;
-
-        const MAX_SIZE = 250 * 1024 * 1024; // 250 MB limite
-
-        for (let i = 0; i < files.length; i++) {
-            let f = files[i];
-
-            if (f.size > MAX_SIZE) {
-                alert(`Il file "${f.name}" supera i 250MB consentiti (${(f.size/(1024*1024)).toFixed(1)}MB).`);
-                continue;
-            }
-
-            let reader = new FileReader();
-            let bar = document.getElementById('sender-progress');
-            let text = document.getElementById('sender-progress-text');
-            let info = document.getElementById('sender-time-info');
-            let start = Date.now();
-
-            reader.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    let p = Math.round((e.loaded / e.total) * 100);
-                    bar.style.width = p + '%';
-                    text.innerText = `Elaborazione ${f.name}: ${p}%`;
-                }
-            };
-
-            reader.onload = async (e) => {
-                let filePayload = {
-                    name: f.name,
-                    size: f.size,
-                    data: e.target.result
-                };
-
-                text.innerText = `Invio al cloud in corso...`;
-
-                try {
-                    let response = await fetch('/api/index', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'upload', file: filePayload })
-                    });
-
-                    if (response.ok) {
-                        let elapsed = (Date.now() - start) / 1000;
-                        bar.style.width = '100%';
-                        text.innerText = 'Caricamento completato!';
-                        info.innerText = `⏱️ Tempo impiegato: ${elapsed.toFixed(1)}s`;
-                    } else {
-                        text.innerText = 'Errore caricamento (File troppo grande o timeout)';
-                    }
-                } catch (err) {
-                    text.innerText = 'Errore di connessione.';
-                }
-            };
-
-            reader.readAsDataURL(f);
-        }
-    }
-
-    async function fetchFiles() {
-        try {
-            let res = await fetch('/api/index?get=files');
-            let files = await res.json();
-            
-            // Crea una firma rapida basata su nomi e lunghezze per sibilare l'aggiornamento immediato
-            let signature = files.map(f => f.name + f.size).join('_');
-            if (signature !== lastFileSignature) {
-                lastFileSignature = signature;
-                renderFiles(files);
-            }
-        } catch(err) {
-            console.error(err);
-        }
-    }
-
-    function renderFiles(files) {
-        let tbody = document.getElementById('file-table-body');
-        document.getElementById('status-items-count').innerText = `${files.length} oggetto(i)`;
-
-        tbody.innerHTML = '';
-        if (files.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:gray; padding-top:40px;">Nessun file presente nella root.</td></tr>`;
-            return;
-        }
-
-        files.forEach((file, idx) => {
-            let size = (file.size > 1024*1024) ? (file.size / (1024*1024)).toFixed(2) + ' MB' : (file.size / 1024).toFixed(1) + ' KB';
-            
-            let act = `
-                <button class="btn" style="padding:2px 8px; background:#000080; color:white;" onclick="saveFile(${idx}, '${encodeURIComponent(file.name)}', '${file.data}')">Salva</button>
-                <button class="btn" style="padding:2px 8px; background:#ff8080;" onclick="deleteFile(${idx})">Elimina</button>
-            `;
-
-            tbody.innerHTML += `
-                <tr>
-                    <td>📄 ${file.name}</td>
-                    <td>${size}</td>
-                    <td>${act}</td>
-                </tr>
-            `;
-        });
-    }
-
-    function saveFile(idx, name, data) {
-        let decodedName = decodeURIComponent(name);
-        document.getElementById('receiver-progress-text').innerText = `Salvato nei Download: ${decodedName}`;
-        
-        let a = document.createElement('a');
-        a.href = data;
-        a.download = decodedName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    }
-
-    async function deleteFile(idx) {
-        // Sibilata immediata di eliminazione: rimuove istantaneamente la riga e aggiorna il server
-        await fetch('/api/index', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'delete', index: idx })
-        });
-        fetchFiles();
-    }
-</script>
-
-</body>
-</html>
-"""
-
-@app.route("/", defaults={"path": ""}, methods=["GET", "POST"])
-@app.route("/<path:path>", methods=["GET", "POST"])
-def catch_all(path):
-    if request.method == "POST":
-        data = request.get_json()
-        if data:
-            files = load_files()
-            if data.get("action") == "upload":
-                files.append(data.get("file"))
-                save_files(files)
-                return jsonify({"status": "success"})
-            elif data.get("action") == "delete":
-                idx = data.get("index")
-                if 0 <= idx < len(files):
-                    files.pop(idx)
-                    save_files(files)
-                return jsonify({"status": "success"})
-        return jsonify({"status": "error"})
-    
-    if request.args.get("get") == "files":
-        return jsonify(load_files())
-        
-    return render_template_string(HTML_TEMPLATE)
+@app.get("/")
+def home():
+    return Response(HTML, mimetype="text/html")
