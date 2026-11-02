@@ -18,8 +18,8 @@ const $=id=>document.getElementById(id);
 function say(s){$('status').textContent=s}
 function progress(p){$('bar').style.width=Math.max(0,Math.min(100,p))+'%'}
 function topic(pin){return 'fileshare98/v1/'+pin}
-function makeMqtt(){return new Promise((resolve,reject)=>{if(!window.mqtt){reject(Error('Libreria di collegamento non disponibile. Ricarica la pagina.'));return}mqtt=window.mqtt.connect(MQTT_URL,{clientId:'fs98_'+Math.random().toString(16).slice(2),clean:true,connectTimeout:12000,reconnectPeriod:0});const timer=setTimeout(()=>reject(Error('Servizio PIN non raggiungibile. Riprova.')),13000);mqtt.once('connect',()=>{clearTimeout(timer);resolve()});mqtt.once('error',e=>{clearTimeout(timer);reject(Error('Connessione PIN non riuscita: '+e.message))})})}
-function publishSignal(kind,sdp){mqtt.publish(topic(roomPin),JSON.stringify({kind,sdp,at:Date.now()}),{qos:1,retain:true})}
+function makeMqtt(){return new Promise((resolve,reject)=>{if(!window.mqtt){reject(Error('Libreria di collegamento non disponibile. Ricarica la pagina.'));return}mqtt=window.mqtt.connect(MQTT_URL,{clientId:'fs98_'+Math.random().toString(16).slice(2),clean:true,protocolVersion:5,connectTimeout:12000,reconnectPeriod:0});const timer=setTimeout(()=>reject(Error('Servizio PIN non raggiungibile. Riprova.')),13000);mqtt.once('connect',()=>{clearTimeout(timer);resolve()});mqtt.once('error',e=>{clearTimeout(timer);reject(Error('Connessione PIN non riuscita: '+e.message))})})}
+function publishSignal(kind,sdp){mqtt.publish(topic(roomPin),JSON.stringify({kind,sdp,at:Date.now()}),{qos:1,retain:true,properties:{messageExpiryInterval:600}})}
 function waitIce(){return new Promise(resolve=>{if(pc.iceGatheringState==='complete')return resolve();const done=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',done);resolve()}};pc.addEventListener('icegatheringstatechange',done);setTimeout(resolve,12000)})}
 function setupPeer(sender){pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});pc.onconnectionstatechange=()=>{say('Connessione: '+pc.connectionState);if(pc.connectionState==='failed')say('Connessione diretta non riuscita su questa rete. Prova con entrambi i telefoni sulla stessa Wi-Fi.')};if(sender){channel=pc.createDataChannel('files',{ordered:true});wireChannel()}else pc.ondatachannel=e=>{channel=e.channel;wireChannel()}}
 function wireChannel(){channel.binaryType='arraybuffer';channel.onopen=()=>{say('Dispositivi collegati. Pronto al trasferimento.');$('close').disabled=false;if(role==='receiver')say('Collegato! Attendo i file…');else $('files').disabled=false};channel.onmessage=onData;channel.onerror=()=>say('Errore nel canale di trasferimento.')}
@@ -34,4 +34,5 @@ $('create').onclick=()=>createRoom().catch(e=>say(e.message));
 $('join').onclick=()=>joinRoom().catch(e=>{say(e.message);if(pc)pc.close()});
 $('files').onchange=e=>{const files=Array.from(e.target.files||[]);e.target.value='';sendFiles(files).catch(e=>say(e.message))};
 $('close').onclick=closeSession;
+window.addEventListener('pagehide',()=>{if(mqtt&&roomPin){try{mqtt.publish(topic(roomPin),'',{retain:true,qos:1})}catch(e){}}});
 </script></body></html>
