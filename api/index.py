@@ -32,8 +32,52 @@ async function joinRoom(){const pin=$('joinPin').value.replace(/\D/g,'');if(!/^\
 function waitDrain(){if(channel.bufferedAmount<1024*1024)return Promise.resolve();return new Promise(resolve=>{channel.bufferedAmountLowThreshold=256*1024;channel.onbufferedamountlow=()=>{channel.onbufferedamountlow=null;resolve()}})}
 async async function sendFiles(list){if(!channel||channel.readyState!=='open')throw Error('Prima collega il secondo dispositivo.');if(busy)return;busy=true;$('files').disabled=true;try{for(const file of list){if(file.size>MAX_FILE)throw Error(file.name+' supera 3 GB.');channel.send(JSON.stringify({kind:'meta',name:file.name,size:file.size,type:file.type||'application/octet-stream'}));let sent=0;while(sent<file.size){await waitDrain();const part=file.slice(sent,Math.min(sent+CHUNK,file.size));channel.send(await part.arrayBuffer());sent+=part.size;progress(sent/file.size*100);say('Invio '+file.name+' — '+Math.round(sent/file.size*100)+'%')}channel.send(JSON.stringify({kind:'end'}));say('Inviato: '+file.name)}say('Trasferimento completato.')}finally{busy=false;$('files').disabled=false}}
 function toBase64(buffer){let binary='';const bytes=new Uint8Array(buffer);for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);return btoa(binary)}
-function onData(e){if(typeof e.data==='string'){let m;try{m=JSON.parse(e.data)}catch{return}if(m.kind==='meta'){receiveMeta=m;receiveParts=[];receivedBytes=0;nativeFile=!!(window.AndroidFileBridge&&window.AndroidFileBridge.beginFile);if(nativeFile)window.AndroidFileBridge.beginFile(m.name,m.type,m.size);progress(0);say('Ricezione '+m.name+' ('+(m.size/1073741824).toFixed(2)+' GB)')}else if(m.kind==='end'&&receiveMeta){if(nativeFile){window.AndroidFileBridge.finishFile();say('Ricevuto e salvato nei Download: '+receiveMeta.name)}else{const blob=new Blob(receiveParts,{type:receiveMeta.type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=receiveMeta.name;a.textContent='Scarica '+receiveMeta.name+' ('+(blob.size/1048576).toFixed(1)+' MB)';a.className='btn primary file';$('received').append(a);say('Ricevuto '+receiveMeta.name+'. Tocca Scarica per salvarlo.')}receiveParts=[];receiveMeta=null;progress(100)}return}if(receiveMeta){if(nativeFile)window.AndroidFileBridge.appendChunk(toBase64(e.data));else receiveParts.push(e.data);receivedBytes+=e.data.byteLength;progress(receivedBytes/receiveMeta.size*100);say('Ricezione in corso: '+Math.round(receivedBytes/receiveMeta.size*100)+'%')}}
-function closeSession(){if(channel)channel.close();if(pc)pc.close();if(mqtt){if(roomPin)mqtt.publish(topic(roomPin),'',{retain:true,qos:1});mqtt.end(true)}pc=null;channel=null;mqtt=null;roomPin=null;role=null;$('close').disabled=true;$('files').disabled=true;say('Sessione chiusa.');progress(0)}
+function onData(e){
+ if(typeof e.data==='string'){
+  let m;try{m=JSON.parse(e.data)}catch{return}
+  if(m.kind==='meta'){
+   if(receiveMeta){say('Trasferimento precedente incompleto: sessione interrotta.');receiveParts=[];receiveMeta=null;receivedBytes=0}
+   if(typeof m.name!=='string'||!Number.isSafeInteger(m.size)||m.size<0||m.size>MAX_FILE){
+    say('File rifiutato: nome o dimensione non validi.');return
+   }
+   const safeName=m.name.replace(/[\\u0000-\\u001f/\\\\]/g,'_').slice(0,180)||'received-file';
+   receiveMeta={name:safeName,size:m.size,type:typeof m.type==='string'?m.type:'application/octet-stream'};
+   receiveParts=[];receivedBytes=0;
+   nativeFile=!!(window.AndroidFileBridge&&window.AndroidFileBridge.beginFile);
+   try{if(nativeFile)window.AndroidFileBridge.beginFile(receiveMeta.name,receiveMeta.type,receiveMeta.size)}
+   catch(error){receiveMeta=null;nativeFile=false;say('Impossibile preparare il salvataggio Android: '+error.message);return}
+   progress(0);say('Ricezione '+receiveMeta.name+' ('+(receiveMeta.size/1073741824).toFixed(2)+' GB)')
+  }else if(m.kind==='end'&&receiveMeta){
+   if(receivedBytes!==receiveMeta.size){
+    say('File incompleto: dimensione ricevuta diversa da quella dichiarata.');
+    receiveParts=[];receiveMeta=null;receivedBytes=0;progress(0);return
+   }
+   if(nativeFile){
+    try{window.AndroidFileBridge.finishFile();say('Ricevuto e salvato nei Download: '+receiveMeta.name)}
+    catch(error){say('Errore nel salvataggio Android: '+error.message)}
+   }else{
+    const blob=new Blob(receiveParts,{type:receiveMeta.type}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=receiveMeta.name;a.textContent='Scarica '+receiveMeta.name+' ('+(blob.size/1048576).toFixed(1)+' MB)';a.className='btn primary file';
+    a.addEventListener('click',()=>setTimeout(()=>URL.revokeObjectURL(url),60000),{once:true});
+    $('received').append(a);say('Ricevuto '+receiveMeta.name+'. Tocca Scarica per salvarlo.')
+   }
+   receiveParts=[];receiveMeta=null;receivedBytes=0;progress(100)
+  }
+  return
+ }
+ if(receiveMeta&&e.data instanceof ArrayBuffer){
+  if(receivedBytes+e.data.byteLength>receiveMeta.size||receivedBytes+e.data.byteLength>MAX_FILE){
+   say('Trasferimento interrotto: il mittente ha inviato più dati del previsto.');
+   receiveParts=[];receiveMeta=null;receivedBytes=0;if(channel)channel.close();progress(0);return
+  }
+  try{
+   if(nativeFile)window.AndroidFileBridge.appendChunk(toBase64(e.data));else receiveParts.push(e.data)
+   receivedBytes+=e.data.byteLength;
+   progress(receiveMeta.size?receivedBytes/receiveMeta.size*100:100);
+   say('Ricezione in corso: '+(receiveMeta.size?Math.round(receivedBytes/receiveMeta.size*100):100)+'%')
+  }catch(error){say('Errore durante la ricezione: '+error.message);receiveParts=[];receiveMeta=null;receivedBytes=0}
+ }
+}function closeSession(){if(channel)channel.close();if(pc)pc.close();if(mqtt){if(roomPin)mqtt.publish(topic(roomPin),'',{retain:true,qos:1});mqtt.end(true)}pc=null;channel=null;mqtt=null;roomPin=null;role=null;$('close').disabled=true;$('files').disabled=true;say('Sessione chiusa.');progress(0)}
 $('create').onclick=()=>createRoom().catch(e=>say(e.message));
 $('join').onclick=()=>joinRoom().catch(e=>{say(e.message);if(pc)pc.close()});
 $('files').onchange=e=>{const files=Array.from(e.target.files||[]);e.target.value='';sendFiles(files).catch(e=>say(e.message))};
