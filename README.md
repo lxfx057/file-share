@@ -22,7 +22,7 @@ I file non transitano attraverso la funzione serverless Vercel: il backend gener
 5. Esegui un nuovo deploy Vercel.
 
 ## Trasferimenti
-- Limite applicativo: 3 GiB per file.
+- Limite applicativo: 3 GB per file.
 - Blocchi da 64 MiB caricati direttamente dal browser a R2.
 - Download tramite URL prefirmati temporanei.
 - Annullamento del multipart in corso.
