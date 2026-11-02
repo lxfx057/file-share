@@ -4,7 +4,7 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "*", "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS", "access-control-allow-headers": "content-type" }
 });
 const pin = () => Array.from(crypto.getRandomValues(new Uint8Array(PIN_LENGTH)), b => String(b % 10)).join("");
-const validPin = p => /^\\d{8}$/.test(p);
+const validPin = p => /^\d{8}$/.test(p);
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS", "access-control-allow-headers": "content-type" } });
