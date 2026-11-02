@@ -35,7 +35,7 @@ export default {
       await env.ROOMS.put(code, JSON.stringify(room), { expirationTtl: ROOM_TTL });
       return json({ ok: true });
     }
-    if (request.method === "DELETE" && parts.length === 2) {
+    if ((request.method === "DELETE" && parts.length === 2) || (request.method === "POST" && parts.length === 3 && parts[2] === "close")) {
       await env.ROOMS.delete(code);
       return json({ ok: true });
     }
