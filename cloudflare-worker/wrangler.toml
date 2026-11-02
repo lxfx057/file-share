@@ -1,0 +1,7 @@
+name = "file-share98-signaling"
+main = "src/index.js"
+compatibility_date = "2026-11-02"
+
+[[kv_namespaces]]
+binding = "ROOMS"
+id = "INSERISCI_KV_NAMESPACE_ID"
