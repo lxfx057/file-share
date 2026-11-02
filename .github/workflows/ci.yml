@@ -15,3 +15,16 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m py_compile api/index.py
+      - name: Validate embedded browser JavaScript
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          source = Path('api/index.py').read_text()
+          html = re.search(r'HTML = r\"\"\"(.*?)\"\"\"', source, re.S)
+          assert html, 'HTML template not found'
+          script = re.search(r'<script>(.*?)</script>', html.group(1), re.S)
+          assert script, 'Browser script not found'
+          Path('/tmp/file-share.js').write_text(script.group(1))
+          PY
+          node --check /tmp/file-share.js
