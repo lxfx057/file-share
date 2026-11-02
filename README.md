@@ -1,46 +1,35 @@
-# File Share 98 — Android ⇄ iPhone
+# File Share 98
 
-Trasferimento di file tra iPhone e Android tramite PIN, con interfaccia Windows 98.
+Sito web per trasferire file tra iPhone e Android in entrambe le direzioni, usando il browser e un PIN temporaneo.
 
-## Uso previsto
+## Come si usa
 
-1. Apri File Share 98 su uno dei due telefoni.
-2. Premi **Crea PIN temporaneo**: il dispositivo entra in modalità INVIO.
-3. Sul secondo telefono apri File Share 98, inserisci lo stesso PIN e premi **Collega e ricevi**.
-4. Quando compare la connessione, seleziona i file sul dispositivo mittente.
-5. Il ricevente scarica i file: su Android l'app li salva direttamente in **Download/File Share 98**; su iPhone Safari propone il download e il salvataggio nell'app File.
+1. Apri il sito su entrambi i telefoni.
+2. Sul telefono che deve inviare premi **Crea PIN temporaneo**.
+3. Sul telefono che deve ricevere inserisci quel PIN e premi **Collega e ricevi**.
+4. Quando i dispositivi risultano collegati, seleziona uno o più file sul mittente.
+5. Il ricevente scarica i file sul proprio telefono.
 
-La direzione è libera: Android può inviare a iPhone e iPhone può inviare ad Android.
+Per invertire la direzione basta creare il PIN dal telefono che questa volta deve inviare. Non serve installare APK o app: iPhone usa Safari e Android usa il proprio browser.
 
-## APK Android
+## Pubblicazione su Vercel
 
-Il progetto Android è in `android/`. A ogni modifica del progetto Android, GitHub Actions esegue la build dell'APK Debug.
+Il progetto è una web app Python/Flask. Il file `vercel.json` instrada le richieste a `api/index.py`; `requirements.txt` contiene le dipendenze Python. Importa il repository in Vercel e pubblica il progetto senza dover configurare database, KV, R2 o credenziali applicative.
 
-Per scaricarlo:
-1. Apri la scheda **Actions** del repository.
-2. Apri l'ultima esecuzione riuscita di **Build Android APK**.
-3. Scarica l'artifact **File-Share-98-Android-APK**.
-4. Estrai lo ZIP e installa `app-debug.apk` su Android.
+## Collegamento temporaneo PIN
 
-L'APK contiene la stessa interfaccia Windows 98 e usa il selettore file Android. I file ricevuti vengono scritti progressivamente nella cartella Download, senza accumulare l'intero file nella RAM.
+La segnalazione usa il broker pubblico MQTT-over-WebSocket Secure `broker.emqx.io`, senza account. I messaggi di segnalazione sono temporanei e scadono dopo 10 minuti. Il broker trasporta soltanto le informazioni necessarie a negoziare WebRTC; i byte dei file passano direttamente tra i dispositivi attraverso un DataChannel WebRTC cifrato.
 
-## Collegamento PIN senza registrazione
+Il broker è un servizio di terzi: disponibilità, limiti e continuità non sono garantiti. I topic PIN sono pubblici e il PIN non va considerato una credenziale per proteggere informazioni sensibili.
 
-Il collegamento usa il broker MQTT pubblico `broker.emqx.io` via WebSocket Secure, senza account o credenziali. Non è un servizio gestito da questo progetto e la sua disponibilità non è garantita.
+## Limiti tecnici
 
-Il broker riceve soltanto il PIN e le descrizioni tecniche WebRTC (offer/answer). **I contenuti dei file non vengono inviati al broker**: viaggiano direttamente tra i dispositivi tramite WebRTC DataChannel, cifrato dal protocollo WebRTC. Il broker pubblico è comunque un'infrastruttura di terzi e i messaggi tecnici di segnalazione non vanno considerati privati.
-
-Non viene creato un archivio cloud e non viene richiesta una nuova registrazione. Il progetto non usa Cloudflare KV, R2 o un database esterno.
-
-## Limiti e note importanti
-
-- Limite applicativo: 3.000.000.000 byte per file. È un tetto software, non una garanzia universale: velocità, spazio libero, browser e rete possono limitare file molto grandi.
-- Su Android il ricevitore nativo scrive a blocchi in Download. Su iPhone il browser gestisce il download; Safari può avere limiti di memoria/spazio temporaneo per file molto grandi.
-- La connessione diretta WebRTC usa STUN ma non un relay TURN. Alcune reti mobili, NAT o firewall possono impedire il collegamento; in quel caso prova con entrambi i telefoni sulla stessa Wi-Fi.
-- Il broker MQTT pubblico può essere indisponibile, limitare il traffico o cambiare servizio. Se accade, il PIN non potrà collegare i dispositivi finché non si sceglie un altro sistema di segnalazione.
-- Tieni aperte le schermate di entrambi i dispositivi per tutta la durata del trasferimento.
-- Il PIN è temporaneo e va condiviso solo con il destinatario previsto.
+- Il limite applicativo è 3.000.000.000 byte per file; non garantisce che ogni browser o telefono riesca a gestire file di quelle dimensioni.
+- Su iPhone il ricevitore web accumula attualmente i blocchi in memoria prima di creare il download. Safari può quindi non riuscire con file molto grandi, in particolare vicino a 3 GB.
+- La connessione WebRTC usa STUN, senza relay TURN. Alcune reti mobili, NAT o firewall possono impedire il collegamento diretto; provare entrambi i dispositivi sulla stessa Wi-Fi può aiutare.
+- Entrambe le pagine devono restare aperte durante il trasferimento.
+- Questa versione non archivia i file su un cloud e non richiede registrazioni aggiuntive.
 
 ## Stato
 
-Implementazione in sviluppo. La build APK automatica e il trasferimento reale devono ancora essere verificati su dispositivi fisici iOS e Android, inclusi file di grandi dimensioni. Non considerarlo pronto per dati importanti finché i test non sono completati.
+Codice web predisposto per la pubblicazione su Vercel. Prima di considerarlo pronto all'uso quotidiano occorre completare test reali su iPhone e Android, su reti differenti e con file di grandi dimensioni.
