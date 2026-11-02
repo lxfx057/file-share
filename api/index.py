@@ -40,7 +40,7 @@ function onData(e){
    if(typeof m.name!=='string'||!Number.isSafeInteger(m.size)||m.size<0||m.size>MAX_FILE){
     say('File rifiutato: nome o dimensione non validi.');return
    }
-   const safeName=m.name.replace(/[\\u0000-\\u001f/\\\\]/g,'_').slice(0,180)||'received-file';
+   const safeName=Array.from(m.name).filter(ch=>ch.charCodeAt(0)>=32&&ch!=='/'&&ch!==String.fromCharCode(92)).join('').slice(0,180)||'received-file';
    receiveMeta={name:safeName,size:m.size,type:typeof m.type==='string'?m.type:'application/octet-stream'};
    receiveParts=[];receivedBytes=0;
    nativeFile=!!(window.AndroidFileBridge&&window.AndroidFileBridge.beginFile);
