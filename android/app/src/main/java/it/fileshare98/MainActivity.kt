@@ -51,8 +51,8 @@ class MainActivity : ComponentActivity() {
     inner class AndroidFileBridge {
         @JavascriptInterface
         fun beginFile(name: String, mime: String, size: Long) {
-            runOnUiThread {
-                try {
+            try {
+                synchronized(this@MainActivity) {
                     output?.close()
                     val values = ContentValues().apply {
                         put(MediaStore.Downloads.DISPLAY_NAME, name.replace(Regex("[\\\\/:*?\"<>|]"), "_"))
@@ -63,13 +63,12 @@ class MainActivity : ComponentActivity() {
                     pendingUri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
                     output = pendingUri?.let { contentResolver.openOutputStream(it, "w") }
                     if (output == null) throw IllegalStateException("Impossibile creare il file nei Download")
-                    Toast.makeText(this@MainActivity, "Ricezione: $name", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    Toast.makeText(this@MainActivity, "Errore salvataggio: ${e.message}", Toast.LENGTH_LONG).show()
                 }
+                runOnUiThread { Toast.makeText(this@MainActivity, "Ricezione: $name", Toast.LENGTH_SHORT).show() }
+            } catch (e: Exception) {
+                runOnUiThread { Toast.makeText(this@MainActivity, "Errore salvataggio: ${e.message}", Toast.LENGTH_LONG).show() }
             }
         }
-
         @JavascriptInterface
         fun appendChunk(base64: String) {
             try {
@@ -82,8 +81,8 @@ class MainActivity : ComponentActivity() {
 
         @JavascriptInterface
         fun finishFile() {
-            runOnUiThread {
-                try {
+            try {
+                synchronized(this@MainActivity) {
                     output?.flush()
                     output?.close()
                     output = null
@@ -92,10 +91,10 @@ class MainActivity : ComponentActivity() {
                         contentResolver.update(uri, values, null, null)
                     }
                     pendingUri = null
-                    Toast.makeText(this@MainActivity, "File salvato in Download/File Share 98", Toast.LENGTH_LONG).show()
-                } catch (e: Exception) {
-                    Toast.makeText(this@MainActivity, "Errore finale: ${e.message}", Toast.LENGTH_LONG).show()
                 }
+                runOnUiThread { Toast.makeText(this@MainActivity, "File salvato in Download/File Share 98", Toast.LENGTH_LONG).show() }
+            } catch (e: Exception) {
+                runOnUiThread { Toast.makeText(this@MainActivity, "Errore finale: ${e.message}", Toast.LENGTH_LONG).show() }
             }
         }
     }
