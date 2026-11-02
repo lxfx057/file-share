@@ -7,7 +7,7 @@ from flask import Flask, jsonify, render_template_string, request, session
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "")
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_SECURE=True, MAX_CONTENT_LENGTH=2*1024*1024)
-MAX_FILE_SIZE = 3*1024*1024*1024
+MAX_FILE_SIZE = 3*1000*1000*1000
 PART_SIZE = 64*1024*1024
 
 def storage_configured():
