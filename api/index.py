@@ -26,7 +26,7 @@ def protect():
 
 def safe_name(value):
     name=os.path.basename(str(value or "file").replace("\\","/"))
-    name=re.sub(r"[\\x00-\\x1f\\x7f]","_",name).strip(" .")
+    name=re.sub(r"[\x00-\x1f\x7f]","_",name).strip(" .")
     return (name or "file")[:180]
 
 @app.get("/")
