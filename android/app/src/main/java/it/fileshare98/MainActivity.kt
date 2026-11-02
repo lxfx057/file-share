@@ -13,10 +13,9 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import java.io.OutputStream
 
-class MainActivity : ComponentActivity() {
+class MainActivity : Activity() {
     private lateinit var web: WebView
     private var chooserCallback: ValueCallback<Array<Uri>>? = null
     private var output: OutputStream? = null
