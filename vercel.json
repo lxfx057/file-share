@@ -11,5 +11,13 @@
       "src": "/(.*)",
       "destination": "/api/index.py"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.py": {
+      "includeFiles": [
+        "api/templates/**",
+        "api/static/**"
+      ]
+    }
+  }
 }
