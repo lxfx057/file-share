@@ -28,7 +28,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add api/static/wasm
+          git add -f api/static/wasm
           if ! git diff --cached --quiet; then
             git commit -m "build: compile Rust transfer core to WebAssembly"
             git push
