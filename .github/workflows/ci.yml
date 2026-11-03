@@ -20,6 +20,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
       - name: Validate Python backend
         run: python -m py_compile api/index.py
       - name: Test Flask routes and PIN endpoint
