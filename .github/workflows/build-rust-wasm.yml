@@ -33,5 +33,7 @@ jobs:
           git add -f api/static/wasm
           if ! git diff --cached --quiet; then
             git commit -m "build: compile Rust transfer core to WebAssembly"
-            git push
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
           fi
