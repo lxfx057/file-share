@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#008080">
+  <meta name="description" content="Trasferisci file tra iPhone e Android con un PIN temporaneo.">
+  <title>File Share 98</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="desktop">
+    <div class="desktop-icons" aria-hidden="true">
+      <div class="desktop-icon"><span>🖥️</span><small>Risorse<br>del computer</small></div>
+      <div class="desktop-icon"><span>🌐</span><small>Rete</small></div>
+      <div class="desktop-icon"><span>📁</span><small>File Share</small></div>
+    </div>
+
+    <main class="app-window" aria-label="File Share 98">
+      <header class="titlebar">
+        <div class="titlebar-name"><span class="app-mark">⇄</span><span>File Share 98</span></div>
+        <div class="window-controls" aria-hidden="true"><span>_</span><span>□</span><span>×</span></div>
+      </header>
+      <nav class="menubar" aria-label="Menu">
+        <span><u>F</u>ile</span><span><u>T</u>rasferimento</span><span><u>A</u>iuto</span>
+      </nav>
+      <div class="toolbar">
+        <div class="toolbar-icon">📂</div>
+        <div><strong>Procedura guidata trasferimento file</strong><small>Invia o ricevi file tra dispositivi, senza account.</small></div>
+        <div class="toolbar-spacer"></div>
+        <div class="win-logo">98</div>
+      </div>
+
+      <div class="workspace">
+        <aside class="side-panel">
+          <div class="side-heading">Operazioni</div>
+          <div class="side-link active"><span>📤</span> Invia file</div>
+          <div class="side-link"><span>📥</span> Ricevi file</div>
+          <div class="side-divider"></div>
+          <div class="side-heading">Connessione</div>
+          <div class="connection-state"><i id="connection-led"></i><span id="connection-label">Non connesso</span></div>
+          <p class="side-note">I file vengono trasferiti direttamente tra i dispositivi tramite WebRTC.</p>
+        </aside>
+
+        <section class="main-panel">
+          <div class="welcome">
+            <div class="welcome-icon">💾</div>
+            <div><h1>Benvenuto in File Share 98</h1><p>Condividi i tuoi file in pochi passaggi.</p></div>
+          </div>
+
+          <div class="action-grid">
+            <article class="action-card">
+              <div class="card-heading"><span>📤</span><h2>Invia file</h2></div>
+              <p>Crea un PIN temporaneo e collegati al dispositivo che deve ricevere.</p>
+              <button id="create" class="win-button primary" type="button">Crea PIN &gt;</button>
+              <div id="pinBox" class="pin-box hidden">
+                <label>Il tuo PIN temporaneo</label>
+                <div class="pin-row"><strong id="pin">--------</strong><button id="copy-pin" class="win-button small" type="button" disabled>Copia</button></div>
+                <p>Inserisci questo codice nell'altro dispositivo.</p>
+                <label class="file-picker win-button" for="files">Scegli file…</label>
+                <input id="files" type="file" multiple disabled>
+                <small id="file-hint">La selezione si abilita quando i dispositivi sono collegati.</small>
+              </div>
+            </article>
+
+            <article class="action-card">
+              <div class="card-heading"><span>📥</span><h2>Ricevi file</h2></div>
+              <p>Inserisci il PIN mostrato sul dispositivo che sta inviando.</p>
+              <label class="field-label" for="joinPin">PIN a 8 cifre</label>
+              <input id="joinPin" class="pin-input" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="12345678">
+              <button id="join" class="win-button" type="button">Collega e ricevi &gt;</button>
+              <div id="received" class="received-list"></div>
+            </article>
+          </div>
+
+          <section class="transfer-panel">
+            <div class="transfer-heading"><span>📊</span><strong>Stato trasferimento</strong><span id="percent">0%</span></div>
+            <div class="progress-track"><div id="bar"></div></div>
+            <div id="status" class="status-line" role="status" aria-live="polite"><i class="status-dot"></i><span>Pronto. Crea un PIN oppure inseriscine uno.</span></div>
+          </section>
+
+          <div class="privacy-note"><span>🔐</span><span><strong>Trasferimento diretto e privato.</strong> Nessun file viene caricato su un archivio cloud. Il broker pubblico gestisce solo il collegamento; il contenuto passa nel canale WebRTC cifrato.</span></div>
+        </section>
+      </div>
+
+      <footer class="statusbar"><span id="backend-state">Backend Python: verifica…</span><span>Rust WASM: <b id="rust-state">fallback JS</b></span><span class="statusbar-right">File Share 98 · v2.0</span></footer>
+    </main>
+    <div class="taskbar"><button class="start-button" type="button"><span>🪟</span> Start</button><div class="taskbar-app">⇄ &nbsp;File Share 98</div><div class="clock" id="clock">--:--</div></div>
+  </div>
+</body>
+</html>
