@@ -14,17 +14,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m py_compile api/index.py
-      - name: Validate embedded browser JavaScript
-        run: |
-          python - <<'PY'
-          import re
-          from pathlib import Path
-          source = Path('api/index.py').read_text()
-          html = re.search(r'HTML = r\"\"\"(.*?)\"\"\"', source, re.S)
-          assert html, 'HTML template not found'
-          script = re.search(r'<script>(.*?)</script>', html.group(1), re.S)
-          assert script, 'Browser script not found'
-          Path('/tmp/file-share.js').write_text(script.group(1))
-          PY
-          node --check /tmp/file-share.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Validate Python backend
+        run: python -m py_compile api/index.py
+      - name: Validate browser JavaScript
+        run: node --check api/static/app.js
+      - name: Validate Rust core
+        run: cargo check --manifest-path rust-core/Cargo.toml --target wasm32-unknown-unknown
