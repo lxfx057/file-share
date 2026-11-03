@@ -140,7 +140,7 @@
       const r=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
       if(!r.ok)throw new Error("Il backend non ha creato il PIN (HTTP "+r.status+").");
       const data=await r.json();if(!data.ok||!/^\d{8}$/.test(data.pin))throw new Error("Risposta PIN non valida.");
-      state.pin=data.pin;state.role="sender";$("pin").textContent=state.pin;$("pinBox").classList.remove("hidden");$("copy-pin").disabled=false;
+      state.pin=data.pin;state.role="sender";$("pin").textContent=state.pin;$("pinBox").classList.remove("hidden");$("copy-pin").disabled=false;$("close").disabled=false;
       connection("Connessione al servizio PIN…");status("Apro il canale di segnalazione…");
       state.mqtt=new TinyMqtt(MQTT_URL);await state.mqtt.connect();
       state.mqtt.subscribe(roomTopic(state.pin,"answer"));
@@ -161,7 +161,7 @@
     if(state.busy)return;state.busy=true;$("join").disabled=true;
     try{
       const pin=$("joinPin").value.replace(/\D/g,"");if(!/^\d{8}$/.test(pin))throw new Error("Inserisci un PIN di 8 cifre.");
-      state.pin=pin;state.role="receiver";status("Contatto il servizio PIN…");connection("Connessione al servizio PIN…");
+      state.pin=pin;state.role="receiver";$("close").disabled=false;status("Contatto il servizio PIN…");connection("Connessione al servizio PIN…");
       state.mqtt=new TinyMqtt(MQTT_URL);await state.mqtt.connect();state.mqtt.subscribe(roomTopic(pin,"offer"));
       const offer=await new Promise((resolve,reject)=>{
         let settled=false;const timer=setTimeout(()=>{if(!settled){settled=true;reject(new Error("PIN non trovato o scaduto. Controlla il codice e riprova."));}},35000);
@@ -230,11 +230,12 @@
     if(state.channel)state.channel.close();if(state.pc)state.pc.close();
     if(state.mqtt&&state.pin){try{state.mqtt.publish(roomTopic(state.pin,"offer"),"");state.mqtt.publish(roomTopic(state.pin,"answer"),"");}catch(_){}state.mqtt.close();}
     state.channel=null;state.pc=null;state.mqtt=null;state.pin=null;state.role=null;state.meta=null;state.received=[];
-    $("files").disabled=true;$("copy-pin").disabled=true;connection("Non connesso",false);setProgress(0);status("Sessione chiusa. Puoi crearne una nuova.");
+    $("files").disabled=true;$("copy-pin").disabled=true;$("close").disabled=true;connection("Non connesso",false);setProgress(0);status("Sessione chiusa. Puoi crearne una nuova.");
   }
   $("create").addEventListener("click",()=>createRoom().catch(e=>{status(e.message,"bad");connection("Errore",false);}));
   $("join").addEventListener("click",()=>joinRoom().catch(e=>{status(e.message,"bad");connection("Errore",false);}));
   $("files").addEventListener("change",e=>{const files=Array.from(e.target.files||[]);e.target.value="";sendFiles(files).catch(err=>status(err.message,"bad"));});
+  $("close").addEventListener("click",closeSession);
   $("copy-pin").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(state.pin);status("PIN copiato negli appunti.","good");}catch(_){status("Seleziona e copia il PIN manualmente.");}});
   $("joinPin").addEventListener("input",e=>{e.target.value=e.target.value.replace(/\D/g,"").slice(0,8);});
   $("clock").textContent=new Intl.DateTimeFormat("it-IT",{hour:"2-digit",minute:"2-digit"}).format(new Date());
