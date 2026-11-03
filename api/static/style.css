@@ -141,3 +141,40 @@ button:focus-visible,input:focus-visible,.file-picker:focus-visible{outline:2px 
   .clock{padding:7px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* Classic Windows PC blue edition */
+:root{--win:#c5d9ed;--panel:#dceafa;--navy:#003b78;--blue:#0878d1;--teal:#0878d1}
+html,body{background:#0878d1}
+.desktop{background:linear-gradient(145deg,#168fe8 0%,#0878d1 48%,#034d9b 100%);background-attachment:fixed}
+.app-window{background:#c5d9ed;border-color:#f5fbff #315b82 #315b82 #f5fbff}
+.titlebar{background:linear-gradient(90deg,#003b78 0%,#075db1 45%,#168fe8 100%)}
+.menubar{background:linear-gradient(180deg,#eaf4ff,#c7def4);border-bottom-color:#7196ba}
+.toolbar{background:linear-gradient(180deg,#e3f1ff,#b8d5f1);border-bottom-color:#7196ba}
+.toolbar-icon,.welcome-icon{background:linear-gradient(145deg,#fff,#d8eaff);border-color:#fff #6689ad #6689ad #fff}
+.win-logo{box-shadow:1px 1px 2px #315b82}
+.side-panel{background:linear-gradient(180deg,#dceafa,#a9c9e9);border-right-color:#7196ba}
+.side-heading,.welcome h1,.card-heading h2,.privacy-note strong{color:#003b78}
+.side-link.active{background:linear-gradient(180deg,#fff,#d7eaff);border-color:#fff #7196ba #7196ba #fff}
+.main-panel{background:linear-gradient(145deg,#d6e7f8,#b7d0e9)}
+.welcome{border-bottom-color:#7898b7}
+.action-card,.transfer-panel{background:linear-gradient(145deg,#e8f3ff,#c6dcf2);border-color:#fff #6689ad #6689ad #fff;box-shadow:1px 1px 0 rgba(255,255,255,.8)}
+.card-heading{border-bottom-color:#9bb5ce}
+.card-heading span{background:linear-gradient(145deg,#fff,#d8eaff);border-color:#9bb5ce}
+.win-button{background:linear-gradient(145deg,#f7fbff,#bfd7ed);border-color:#fff #426b92 #426b92 #fff}
+.win-button.primary{background:linear-gradient(180deg,#1689e8 0%,#0756ad 55%,#003b78 100%);color:#fff;border-color:#7fc3ff #00305f #00305f #7fc3ff;text-shadow:1px 1px #00305f}
+.pin-box{background:linear-gradient(180deg,#f7fbff,#dceafa);border-color:#6689ad}
+.pin-row strong,.pin-input,.transfer-heading #percent{color:#003b78}
+.pin-input{border-color:#6689ad}
+.transfer-panel{background:linear-gradient(145deg,#e8f3ff,#c6dcf2)}
+.progress-track{border-color:#6689ad}
+.progress-track div{background:repeating-linear-gradient(90deg,#0878d1 0 10px,#36a0f4 10px 12px)}
+.privacy-note{background:linear-gradient(180deg,#f4f9ff,#d8e9fa);border-color:#8aa9c8}
+.statusbar{background:linear-gradient(180deg,#e3f1ff,#b8d5f1);border-top-color:#fff}
+.taskbar{background:linear-gradient(180deg,#168fe8 0%,#0878d1 48%,#034d9b 100%);border-top-color:#8ccaff}
+.start-button{background:linear-gradient(145deg,#f5fbff,#c4ddf4);border-color:#fff #315b82 #315b82 #fff}
+.taskbar-app,.clock{background:linear-gradient(180deg,#f1f8ff,#c5def5);border-color:#6689ad}
+@media(max-width:760px){
+ .desktop{padding:6px 5px 54px;background:linear-gradient(145deg,#168fe8 0%,#0878d1 48%,#034d9b 100%)}
+ .app-window{background:#c5d9ed}
+}
