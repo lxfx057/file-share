@@ -22,8 +22,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - name: Install wasm-pack
-        run: cargo install wasm-pack --locked
+      - uses: jetli/wasm-pack-action@v0.4.0
       - name: Build browser module
         run: wasm-pack build rust-core --target web --release --out-dir ../api/static/wasm --out-name fileshare_core
       - name: Commit generated WebAssembly
