@@ -1,0 +1,11 @@
+[package]
+name = "fileshare-core"
+version = "0.1.0"
+edition = "2021"
+description = "Rust/WASM integrity helpers for File Share 98"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
