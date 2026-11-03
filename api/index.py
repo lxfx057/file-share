@@ -3,7 +3,7 @@ from pathlib import Path
 import secrets
 import time
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent
 app = Flask(
     __name__,
     template_folder=str(ROOT / "templates"),
@@ -28,8 +28,6 @@ def health():
 
 @app.post("/api/session")
 def create_session():
-    # PIN generation happens on the Python backend. No file contents or
-    # personal data are stored by this endpoint.
     pin = str(secrets.randbelow(90_000_000) + 10_000_000)
     return jsonify({"ok": True, "pin": pin, "expires_in": 600})
 
