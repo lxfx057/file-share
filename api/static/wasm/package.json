@@ -1,0 +1,16 @@
+{
+  "name": "fileshare-core",
+  "type": "module",
+  "description": "Rust/WASM integrity helpers for File Share 98",
+  "version": "0.1.0",
+  "files": [
+    "fileshare_core_bg.wasm",
+    "fileshare_core.js",
+    "fileshare_core.d.ts"
+  ],
+  "main": "fileshare_core.js",
+  "types": "fileshare_core.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
