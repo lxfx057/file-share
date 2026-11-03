@@ -23,12 +23,12 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
       - name: Build browser module
-        run: wasm-pack build rust-core --target web --release --out-dir ../static/wasm --out-name fileshare_core
+        run: wasm-pack build rust-core --target web --release --out-dir ../api/static/wasm --out-name fileshare_core
       - name: Commit generated WebAssembly
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add static/wasm
+          git add api/static/wasm
           if ! git diff --cached --quiet; then
             git commit -m "build: compile Rust transfer core to WebAssembly"
             git push
