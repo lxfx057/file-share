@@ -22,6 +22,21 @@ jobs:
           targets: wasm32-unknown-unknown
       - name: Validate Python backend
         run: python -m py_compile api/index.py
+      - name: Test Flask routes and PIN endpoint
+        run: |
+          python - <<'PY'
+          from api.index import app
+          client = app.test_client()
+          assert client.get('/').status_code == 200
+          assert client.get('/api/health').get_json()['ok'] is True
+          assert client.get('/api/index.py?__path=api%2Fhealth').status_code == 200
+          response = client.post('/api/session', json={})
+          payload = response.get_json()
+          assert response.status_code == 200 and payload['ok'] is True
+          assert len(payload['pin']) == 8 and payload['pin'].isdigit()
+          assert client.get('/api/index.py?__path=static%2Fapp.js').status_code == 200
+          print('Flask routes, PIN generation and static assets: OK')
+          PY
       - name: Validate browser JavaScript
         run: node --check api/static/app.js
       - name: Validate Rust core
