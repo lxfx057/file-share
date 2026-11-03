@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from pathlib import Path
 import secrets
 import time
@@ -31,11 +31,24 @@ def create_session():
     pin = str(secrets.randbelow(90_000_000) + 10_000_000)
     return jsonify({"ok": True, "pin": pin, "expires_in": 600})
 
+# Vercel rewrites requests to this function and forwards the original path
+# in the __path query parameter.
+@app.route("/api/index.py", methods=["GET", "POST"])
+def vercel_dispatch():
+    path = request.args.get("__path", "").strip("/")
+    if path in ("", "index.html"):
+        return home()
+    if path == "api/health" and request.method == "GET":
+        return health()
+    if path == "api/session" and request.method == "POST":
+        return create_session()
+    if path.startswith("static/") and request.method == "GET":
+        return send_from_directory(ROOT / "static", path[len("static/"):])
+    return jsonify({"ok": False, "error": "Endpoint non trovato"}), 404
+
 @app.errorhandler(404)
 def not_found(_error):
-    if request.path.startswith("/api/"):
-        return jsonify({"ok": False, "error": "Endpoint non trovato"}), 404
-    return "Pagina non trovata", 404
+    return jsonify({"ok": False, "error": "Endpoint non trovato"}), 404
 
 @app.errorhandler(500)
 def server_error(_error):
