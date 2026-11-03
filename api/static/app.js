@@ -140,7 +140,7 @@
       const r=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
       if(!r.ok)throw new Error("Il backend non ha creato il PIN (HTTP "+r.status+").");
       const data=await r.json();if(!data.ok||!/^\d{8}$/.test(data.pin))throw new Error("Risposta PIN non valida.");
-      state.pin=data.pin;state.role="sender";$("pin").textContent=state.pin;$("pinBox").classList.remove("hidden");
+      state.pin=data.pin;state.role="sender";$("pin").textContent=state.pin;$("pinBox").classList.remove("hidden");$("copy-pin").disabled=false;
       connection("Connessione al servizio PIN…");status("Apro il canale di segnalazione…");
       state.mqtt=new TinyMqtt(MQTT_URL);await state.mqtt.connect();
       state.mqtt.subscribe(roomTopic(state.pin,"answer"));
